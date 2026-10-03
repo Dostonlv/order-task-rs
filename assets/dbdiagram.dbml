@@ -1,0 +1,102 @@
+Enum user_role {
+  admin
+  user
+}
+
+Enum order_status {
+  pending
+  confirmed
+  cancelled
+}
+
+
+Enum payment_event_type {
+  succeeded
+  failed
+  refunded
+}
+
+Table users {
+  id uuid [pk]
+  email varchar [not null, unique]
+  password_hash varchar [not null]
+  role user_role [not null, default: 'user']
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table products {
+  id uuid [pk]
+  name varchar [not null]
+  price bigint [not null]
+  stock_quantity integer [not null]
+  created_at timestamptz [not null, default: `now()`]
+}
+
+Table orders {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  status order_status [not null, default: 'pending']
+  total_price bigint [not null]
+  expires_at timestamptz [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    user_id
+    (status, expires_at)
+  }
+}
+
+Table order_items {
+  id uuid [pk]
+  order_id uuid [not null, ref: > orders.id]
+  product_id uuid [not null, ref: > products.id]
+  quantity integer [not null]
+  unit_price bigint [not null]
+
+  indexes {
+    (order_id, product_id) [unique]
+  }
+}
+
+Table idempotency_keys {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  key varchar [not null]
+  request_hash varchar [not null]
+  order_id uuid [ref: > orders.id]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (user_id, key) [unique]
+  }
+}
+
+Table payments {
+  id uuid [pk]
+  order_id uuid [not null, ref: > orders.id]
+  provider varchar [not null]
+  provider_payment_id varchar [not null]
+  amount bigint [not null]
+  currency varchar(3) [not null]
+  status payment_status [not null, default: 'pending']
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    order_id
+    (provider, provider_payment_id) [unique]
+  }
+}
+
+Table payment_events {
+  provider varchar [not null]
+  event_id varchar [not null]
+  payment_id uuid [not null, ref: > payments.id]
+  type payment_event_type [not null]
+  payload jsonb
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (provider, event_id) [pk]
+    payment_id
+  }
+}
