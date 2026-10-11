@@ -28,6 +28,7 @@ Table products {
   id uuid [pk]
   name varchar [not null]
   price bigint [not null]
+  image_link varchar [not null]
   stock_quantity integer [not null]
   created_at timestamptz [not null, default: `now()`]
 }
